@@ -1,6 +1,6 @@
 # 知乎搜索 API
 
-基于 FastAPI + Pyppeteer 的知乎搜索服务，模拟浏览器行为抓取知乎搜索结果、文章正文与回答正文，并内置一个 React 前端界面。
+基于 FastAPI + Pyppeteer 的知乎搜索服务，模拟浏览器行为抓取知乎搜索结果、文章正文与回答正文，内置一个原生 HTML 前端（无 Node、无构建步骤）。
 
 ## 功能特性
 
@@ -9,7 +9,7 @@
 - 抓取回答完整正文
 - 运行时更新知乎 Cookie（无需重启服务）
 - Bearer Token 认证（可选）
-- 内置前端：搜索页 + 文章/回答阅读 + 接口测试 + 设置
+- 内置前端：搜索页 + 文章/回答阅读 + 接口测试 + 设置（原生 HTML/CSS/JS）
 - 内置 Swagger 接口文档（`/docs`）
 
 ## 快速开始
@@ -28,24 +28,14 @@ cp .env.example .env
 | `CHROMIUM_PATH` | 是 | Chrome/Chromium 可执行文件路径（Docker 部署无需配置） |
 | `API_TOKEN` | 否 | 访问令牌，填写后所有 `/api/*` 接口需认证 |
 
-### 2. 安装依赖并启动后端
+### 2. 安装依赖并启动
 
 ```bash
 pip install -r requirements.txt
 python -m uvicorn app:app --reload
 ```
 
-服务运行在 http://localhost:8000。
-
-### 3. 启动前端（可选）
-
-```bash
-cd web
-npm ci
-npm run dev
-```
-
-前端运行在 http://localhost:5173，已配置代理到后端。
+访问 http://localhost:8000 即可使用前端页面与 API。
 
 ## API 接口
 
@@ -69,21 +59,29 @@ curl -H "Authorization: Bearer 你的令牌" "http://localhost:8000/api/cookie"
 
 交互式文档：http://localhost:8000/docs（Swagger UI，可在线调试）。
 
+## 前端
+
+前端是 `static/` 目录下的原生 HTML/CSS/JS 单页应用（Hash 路由），无任何构建步骤，由后端直接托管：
+
+- `static/index.html` — 页面骨架与导航
+- `static/style.css` — 样式（跟随系统深浅色）
+- `static/app.js` — 逻辑与 API 调用
+
+页面包含：搜索、文章/回答阅读、接口测试、设置（令牌与 Cookie 管理）。
+
 ## Docker 部署
 
 ```bash
 docker compose up --build -d
 ```
 
-- 前端与后端打包在同一个镜像，访问 `http://localhost:<映射端口>`（compose 中配置）。
-- 镜像内已安装 Chromium，无需手动配置 `CHROMIUM_PATH`。
+- 单阶段构建（无 Node），镜像内已安装 Chromium。
+- 访问 `http://localhost:<映射端口>`（compose 中配置）。
 - `.env` 中的 `ZHIHU_COOKIE` 和 `API_TOKEN` 通过 `env_file` 注入。
 
 ## Render 部署
 
 仓库内已提供 `render.yaml` 与 `build.sh`（构建阶段自动下载 Chromium）。在 Render 上新建 Web Service 并连接仓库即可，需在环境变量中添加 `ZHIHU_COOKIE`。
-
-> 注意：`build.sh` 目前只下载 Chromium、不构建前端，因此 Render 上默认只提供 API（不含前端页面）。如需在 Render 上同时部署前端，需在构建命令中加入前端构建步骤。
 
 ## 注意事项
 

@@ -8,7 +8,6 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pyppeteer import launch
 from dotenv import load_dotenv
@@ -29,8 +28,8 @@ app = FastAPI()
 browser_instances = set()
 loop = None
 
-# 前端构建产物目录（仅当存在时才托管静态资源）
-DIST_DIR = Path(__file__).parent / "web" / "dist"
+# 前端静态资源目录（原生 HTML，无构建步骤）
+STATIC_DIR = Path(__file__).parent / "static"
 
 # Bearer 令牌校验依赖（未配置 API_TOKEN 时放行）
 _bearer = HTTPBearer(auto_error=False)
@@ -421,16 +420,9 @@ async def answer(answer_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 托管前端构建产物并支持 SPA 回退（须在所有 API 路由之后注册）
-if DIST_DIR.is_dir():
-    app.mount("/assets", StaticFiles(directory=DIST_DIR / "assets"), name="assets")
-
-    @app.get("/{full_path:path}", include_in_schema=False)
-    async def spa(full_path: str):
-        candidate = DIST_DIR / full_path
-        if candidate.is_file():
-            return FileResponse(candidate)
-        return FileResponse(DIST_DIR / "index.html")
+# 托管前端静态页面（原生 HTML，无构建步骤；须在所有 API 路由之后注册）
+if STATIC_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
 else:
     @app.get("/")
     async def root():
