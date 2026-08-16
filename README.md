@@ -1,122 +1,93 @@
-# 知乎搜索 API 服务
+# 知乎搜索 API
 
-这是一个基于 FastAPI 和 Pyppeteer 的知乎搜索 API 服务。它可以模拟浏览器行为，执行知乎搜索并返回搜索结果。
+基于 FastAPI + Pyppeteer 的知乎搜索服务，模拟浏览器行为抓取知乎搜索结果、文章正文与回答正文，并内置一个 React 前端界面。
 
-## 功能特点
+## 功能特性
 
-- 支持知乎搜索内容的 API 化
-- 自动处理浏览器环境
-- 支持本地开发和云端部署
-- 完整的 CORS 支持
-- RESTful API 设计
+- 搜索知乎内容（问题 / 文章 / 回答）
+- 抓取专栏文章完整正文
+- 抓取回答完整正文
+- 运行时更新知乎 Cookie（无需重启服务）
+- Bearer Token 认证（可选）
+- 内置前端：搜索页 + 文章/回答阅读 + 接口测试 + 设置
+- 内置 Swagger 接口文档（`/docs`）
 
-## 本地开发
+## 快速开始
 
-1. 克隆仓库：
+### 1. 配置环境变量
+
 ```bash
-git clone <your-repo-url>
-cd <your-repo-name>
+cp .env.example .env
 ```
 
-2. 安装依赖：
+编辑 `.env`，至少填入 `ZHIHU_COOKIE` 和 `CHROMIUM_PATH`：
+
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `ZHIHU_COOKIE` | 是 | 知乎 Cookie（登录知乎后，从浏览器开发者工具复制） |
+| `CHROMIUM_PATH` | 是 | Chrome/Chromium 可执行文件路径（Docker 部署无需配置） |
+| `API_TOKEN` | 否 | 访问令牌，填写后所有 `/api/*` 接口需认证 |
+
+### 2. 安装依赖并启动后端
+
 ```bash
 pip install -r requirements.txt
-```
-
-3. 创建 `.env` 文件并设置知乎 Cookie：
-```
-ZHIHU_COOKIE='your_zhihu_cookie_here'
-```
-
-4. 运行服务：
-```bash
 python -m uvicorn app:app --reload
 ```
 
-服务将在 http://localhost:8000 启动。
+服务运行在 http://localhost:8000。
 
-## API 端点
+### 3. 启动前端（可选）
 
-- `GET /`: 健康检查
-- `GET /search/{query}`: 执行知乎搜索
-  - `query`: 搜索关键词
+```bash
+cd web
+npm ci
+npm run dev
+```
 
-## 部署到 Render
+前端运行在 http://localhost:5173，已配置代理到后端。
 
-1. Fork 或克隆此仓库到你的 GitHub 账号
+## API 接口
 
-2. 在 Render 上创建新的 Web Service：
-   - 选择 "New Web Service"
-   - 连接你的 GitHub 仓库
+认证：若配置了 `API_TOKEN`，所有 `/api/*` 接口需携带请求头 `Authorization: Bearer <令牌>`。
 
-3. 配置部署设置：
-   - 配置文件已经预设在 `render.yaml` 中
-   - Render 会自动识别并使用这些配置
-   - 构建过程会自动下载 Chromium（在构建阶段完成）
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/health` | 健康检查（不鉴权） |
+| GET | `/api/search/{query}` | 搜索，返回精简结果列表 |
+| GET | `/api/article/{id}` | 专栏文章正文 |
+| GET | `/api/answer/{id}` | 回答正文 |
+| GET | `/api/cookie` | 查看 Cookie 状态（脱敏预览） |
+| POST | `/api/cookie` | 更新 Cookie，body：`{"cookie": "..."}` |
 
-4. 添加环境变量：
-   - 在 Render 的环境变量设置中添加 `ZHIHU_COOKIE`
-   - 将你的知乎 Cookie 字符串粘贴为值
+示例：
 
-5. 部署：
-   - 点击 "Create Web Service"
-   - Render 将自动执行以下步骤：
-     1. 安装依赖
-     2. 下载 Chromium（在构建阶段）
-     3. 启动服务
+```bash
+curl "http://localhost:8000/api/search/python"
+curl -H "Authorization: Bearer 你的令牌" "http://localhost:8000/api/cookie"
+```
 
-## 部署说明
+交互式文档：http://localhost:8000/docs（Swagger UI，可在线调试）。
 
-- **构建过程**：
-  - 使用 `build.sh` 脚本自动化构建
-  - 在构建阶段预先下载 Chromium
-  - 构建失败会自动重试（最多3次）
+## Docker 部署
 
-- **资源配置**：
-  - 构建内存：1024MB
-  - 运行内存：starter plan
-  - 实例数量：1（可根据需求调整）
+```bash
+docker compose up --build -d
+```
 
-- **自动部署**：
-  - 启用了自动部署功能
-  - 推送到主分支会触发自动部署
+- 前端与后端打包在同一个镜像，访问 `http://localhost:<映射端口>`（compose 中配置）。
+- 镜像内已安装 Chromium，无需手动配置 `CHROMIUM_PATH`。
+- `.env` 中的 `ZHIHU_COOKIE` 和 `API_TOKEN` 通过 `env_file` 注入。
+
+## Render 部署
+
+仓库内已提供 `render.yaml` 与 `build.sh`（构建阶段自动下载 Chromium）。在 Render 上新建 Web Service 并连接仓库即可，需在环境变量中添加 `ZHIHU_COOKIE`。
+
+> 注意：`build.sh` 目前只下载 Chromium、不构建前端，因此 Render 上默认只提供 API（不含前端页面）。如需在 Render 上同时部署前端，需在构建命令中加入前端构建步骤。
 
 ## 注意事项
 
-1. Cookie 安全：
-   - 不要在代码中硬编码 Cookie
-   - 定期更新 Cookie 以确保可用性
-   - 在生产环境中安全存储 Cookie
-
-2. 资源使用：
-   - Chromium 在构建阶段下载，不会影响运行时性能
-   - 每个请求会启动一个新的浏览器实例，注意资源管理
-
-3. 限制：
-   - 请遵守知乎的使用条款
-   - 建议实现请求频率限制
-   - 注意处理并发请求
-
-## 故障排除
-
-1. 如果构建失败：
-   - 检查构建日志中的 Chromium 下载状态
-   - 确认构建内存是否足够
-   - 可以尝试手动触发重新构建
-
-2. 如果运行时出错：
-   - 检查 Cookie 是否有效
-   - 确认 Chromium 是否正确安装
-   - 查看应用日志获取详细错误信息
-
-3. 如果遇到内存问题：
-   - 考虑升级到更高的计划
-   - 优化并发请求数量
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 许可证
-
-[MIT License](LICENSE) 
+- 每次请求会启动一个无头浏览器，单次搜索约 9 秒，注意并发资源占用。
+- 请遵守知乎使用条款，建议控制请求频率。
+- Docker 中通过 `/api/cookie` 接口更新的 Cookie 仅在容器运行期间生效（不落盘）；如需持久化，请在宿主机 `.env` 中修改后重建/重启容器。
+- 建议在公网部署时配置 `API_TOKEN` 以保护接口。

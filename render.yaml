@@ -22,5 +22,5 @@ services:
       minInstances: 1
       maxInstances: 1
       targetMemoryPercent: 80
-    healthCheckPath: /
+    healthCheckPath: /health
     autoDeploy: true 

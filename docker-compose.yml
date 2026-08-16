@@ -1,0 +1,14 @@
+services:
+  zhihu-search-api:
+    build: .
+    container_name: zhihu-search-api
+    ports:
+      - "7205:8000"
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      # 覆盖 .env 里可能存在的宿主机(Windows)Chrome 路径，容器内统一用自带的 Chromium
+      - CHROMIUM_PATH=/usr/bin/chromium
+    restart: unless-stopped
