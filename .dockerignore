@@ -1,0 +1,22 @@
+# ===== 依赖与构建产物（Docker 内用 npm ci 重新安装，避免拷贝宿主机平台相关二进制/缓存）=====
+node_modules
+dist
+*.tsbuildinfo
+
+# ===== Python =====
+__pycache__
+*.py[cod]
+*.egg-info
+.venv
+
+# ===== 密钥与本地配置 =====
+.env
+
+# ===== 版本控制 / IDE =====
+.git
+.gitignore
+.idea
+.vscode
+
+# ===== 日志 / 临时文件 =====
+*.log
